@@ -1,9 +1,7 @@
 import os
-import subprocess
-from zipfile import ZipFile, BadZipFile
 import shutil
-from orchestrator.zip_validator import scan_with_clamav
 from rest_framework.validators import ValidationError
+from django.db import transaction
 
 DIRETORIO_USUARIOS = os.getenv("DIRETORIO_USUARIOS_ORCHX")
 
@@ -31,11 +29,8 @@ def limpar_diretorio(path):
 
 def criar_diretorios_usuario(id_cliente):
     novo_dir_bots = os.path.join(DIRETORIO_USUARIOS, str(id_cliente), "Bots")
-    try:
-        os.makedirs(novo_dir_bots, exist_ok=True)
-        print("Diretórios de usuário criados com sucesso")
-    except Exception as e:
-        raise ValidationError(f"Erro ao criar os diretórios do usuário: {e}")
+    os.makedirs(novo_dir_bots, exist_ok=True)
+    print("Diretórios de usuário criados com sucesso")
 
 
 def criar_diretorio_robo(id_bot, id_cliente, zip_path):
@@ -47,20 +42,14 @@ def criar_diretorio_robo(id_bot, id_cliente, zip_path):
         os.rename(zip_path, caminho_move_zip)
         print("Arquivo zip movido para pasta do robô com sucesso")
     except Exception as e:
-        print(f"Erro ao criar o diretório do robô: {e}")
-    return novo_robo_dir
-
-
-def criar_diretorio_automacao(id_automacao, id_cliente):
-    nova_automacao_dir = os.path.join(DIRETORIO_USUARIOS, str(id_cliente), "Automações", str(id_automacao))
-    try:
-        os.mkdir(nova_automacao_dir)
-        print("Diretório de automação criado com sucesso")
-    except Exception as e:
-        print(f"Erro ao criar o diretório da automação {e}")
-        deletar_diretorio(nova_automacao_dir)
-        os.mkdir(nova_automacao_dir)
-    return nova_automacao_dir
+        deletar_diretorio(novo_robo_dir)
+        try:
+            os.remove(zip_path)
+        except OSError:
+            pass
+        raise transaction.TransactionManagementError(
+            f"Erro ao criar diretório e mover zip: {e}"
+        )
 
 
 def deletar_ambiente_usuario(id_cliente):

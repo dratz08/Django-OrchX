@@ -1,16 +1,16 @@
 from django.contrib import admin
 from django.urls import path, include
-from orchestrator.views import BotViewSet, AutomacaoViewSet, PassoAutomacaoViewSet
+from orchestrator.views import BotCreateView, ListaBots, AutomacaoCreateView, ListaAutomacoes
 from rest_framework import routers
 
 router = routers.DefaultRouter()
-router.register('bots', BotViewSet, 'Bots')
-# router.register('usuarios', UsuarioViewSet, 'Usuarios')
-router.register('automacoes', AutomacaoViewSet, 'Automações')
-router.register('passo_automacoes', PassoAutomacaoViewSet, 'Passos da Automação')
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(router.urls)),
+    path('bots/<uuid:pk>/', ListaBots.as_view()),
+    path('bots/create/', BotCreateView.as_view()),
+    path('automacoes/<uuid:pk>/', ListaAutomacoes.as_view()),
+    path('automacoes/create/', AutomacaoCreateView.as_view()),
 ]

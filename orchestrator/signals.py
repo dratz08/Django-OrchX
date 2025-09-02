@@ -15,16 +15,16 @@ def criar_env_user(sender, instance, created, **kwargs):
     """
     if created:
         criar_diretorios_usuario(instance.id)
-
-
-@receiver(post_save, sender=Bot)
-def criar_robo_dir(sender, instance, created, **kwargs):
-    """
-    Cria automaticamente o diretório de um robô
-    """
-    if created:
-        try:
-            criar_diretorio_robo(instance.id, instance.id_cliente, instance.zip)
-        except Exception as e:
-            os.remove(str(instance.zip))
-            print(f"Não foi possível criar o diretório do robô: {e}")
+#
+#
+# @receiver(post_save, sender=Bot)
+# def criar_robo_dir(sender, instance, created, **kwargs):
+#     """
+#     Cria automaticamente o diretório de um robô
+#     """
+#     if created:
+#         try:
+#             criar_diretorio_robo(instance.id, instance.id_cliente, instance.zip)
+#         except Exception as e:
+#             os.remove(str(instance.zip))
+#             print(f"Não foi possível criar o diretório do robô: {e}")

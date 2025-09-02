@@ -67,3 +67,15 @@ class PassoAutomacaoSerializers(serializers.ModelSerializer):
     class Meta:
         model = PassoAutomacao
         fields = ['id_automacao', 'id_bot']
+
+
+class ListaBotSerializers(serializers.ListSerializer):
+    class Meta:
+        model = Bot
+        fields = "__all__"
+
+
+class ListaAutomacaoSerializers(serializers.ListSerializer):
+    class Meta:
+        model = Automacao
+        fields = ['nome', 'descricao']

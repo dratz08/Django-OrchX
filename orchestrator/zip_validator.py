@@ -73,7 +73,8 @@ def validar_arquivo_zip(upload_file):
             file_list = zf.namelist()
             # 5.1 Verificar se requirements.txt existe
             if "requirements.txt" not in file_list:
-                raise ValidationError("O arquivo ZIP deve conter um 'requirements.txt'.")
+                raise ValidationError("O arquivo ZIP deve conter um 'requirements.txt'. Caso ele esteja dentro "
+                                      "de uma pasta, mova-o para o diretório principal, e compacte novamente")
 
             # 5.2. Quantidade máxima de arquivos internos
             if len(zf.infolist()) > MAX_ARQUIVOS:
