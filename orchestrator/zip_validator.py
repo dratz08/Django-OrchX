@@ -1,8 +1,10 @@
 import os
 import magic
 import zipfile
+import subprocess
 from hashlib import sha256
 from rest_framework import serializers
+from rest_framework.validators import ValidationError
 
 # Constantes de segurança
 MAX_TAMANHO_ZIP = 50 * 1024 * 1024      # 50 MB
@@ -17,6 +19,23 @@ def calcular_sha256(file_path):
         for chunk in iter(lambda: f.read(8192), b""):
             sha.update(chunk)
     return sha.hexdigest()
+
+
+def scan_with_clamav(file_path: str):
+    """Escaneia um arquivo com ClamAV (se instalado no sistema)"""
+    try:
+        result = subprocess.run(
+            ["clamscan", "--no-summary", file_path],
+            capture_output=True, text=True
+        )
+        if "FOUND" in result.stdout:
+            print(f"Arquivo infectado detectado: {result.stdout}")
+            raise ValidationError(code=400, detail=f"Arquivo infectado detectado: {result.stdout}")
+    except FileNotFoundError:
+        print("⚠️ ClamAV não encontrado, não foi possível fazer a varredura dos arquivos. "
+              "Por favor contacte o suporte")
+        raise ValidationError(code=400, detail="⚠️ ClamAV não encontrado, não foi possível fazer a varredura "
+                                                    "dos arquivos. Por favor contacte o suporte")
 
 
 def validar_arquivo_zip(upload_file):
@@ -51,23 +70,28 @@ def validar_arquivo_zip(upload_file):
     # 5. Validar conteúdo do ZIP
     try:
         with zipfile.ZipFile(temp_path, 'r') as zf:
-            # 5.1. Quantidade máxima de arquivos internos
+            file_list = zf.namelist()
+            # 5.1 Verificar se requirements.txt existe
+            if "requirements.txt" not in file_list:
+                raise ValidationError("O arquivo ZIP deve conter um 'requirements.txt'.")
+
+            # 5.2. Quantidade máxima de arquivos internos
             if len(zf.infolist()) > MAX_ARQUIVOS:
                 raise serializers.ValidationError("O arquivo ZIP contém arquivos demais.")
 
             for member in zf.infolist():
-                # 5.2. Verificar tamanho individual dos arquivos
+                # 5.3. Verificar tamanho individual dos arquivos
                 if member.file_size > MAX_TAMANHO_ARQUIVO:
                     raise serializers.ValidationError(
                         f"Arquivo '{member.filename}' é muito grande ({member.file_size} bytes)."
                     )
 
-                # 5.3. Prevenir Zip Slip (exploração de caminhos)
+                # 5.4. Prevenir Zip Slip (exploração de caminhos)
                 extracted_path = os.path.abspath(os.path.join(temp_path, member.filename))
                 if not extracted_path.startswith(os.path.abspath(dir_tmp)):
                     raise serializers.ValidationError("Tentativa de Zip Slip detectada!")
 
-                # 5.4. Verificar extensões permitidas
+                # 5.5. Verificar extensões permitidas
                 _, ext = os.path.splitext(member.filename)
                 if ext and ext.lower() not in EXTENSOES_PERMITIDAS:
                     raise serializers.ValidationError(f"Extensão não permitida: {ext}")

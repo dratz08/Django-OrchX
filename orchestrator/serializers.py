@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from orchestrator.models import Bot, Usuario, Automacao, PassoAutomacao
+from orchestrator.models import Bot, Automacao, PassoAutomacao
 from rest_framework.validators import ValidationError
 from orchestrator.zip_validator import validar_arquivo_zip
 import re
@@ -9,6 +9,7 @@ class BotSerializers(serializers.ModelSerializer):
     class Meta:
         model = Bot
         fields = ['nome', 'entrypoint', 'zip', 'tipo', 'log_timeout']
+        read_only_fields = ["id_cliente"]
 
     def validate_nome(self, nome):
         padrao = r"^[a-zA-Z_]{3,30}$"
@@ -26,24 +27,28 @@ class BotSerializers(serializers.ModelSerializer):
         print(self.context["request"].user.id)
         return validar_arquivo_zip(zip)
 
+    def create(self, validated_data):
+        validated_data["id_cliente"] = self.context["request"].user
+        return super().create(validated_data)
 
-class UsuarioSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = Usuario
-        fields = '__all__'
 
-    def validate_nome(self, nome):
-        padrao = r"^[a-zA-Z_ ]{3,40}$"
-        if not re.fullmatch(padrao, nome):
-            raise ValidationError('O nome deve conter: De 3 a 40 caracteres; Letras, _ e/ou espaços')
-        return nome
-
-    def validate_senha(self, senha):
-        padrao = r'^(?=.*\d)(?=.*[A-Z])(?=.*[a-z])(?=.*[^\w\d\s:])([^\s]){8,50}$'
-        if not re.fullmatch(padrao, senha):
-            raise ValidationError("A senha deve conter: De 8 a 50 caracteres; 1 número"
-                                  "1 letra maiúscula ; 1 letra minúscula; 1 caractere especial")
-        return senha
+# class UsuarioSerializers(serializers.ModelSerializer):
+#     class Meta:
+#         model = Usuario
+#         fields = '__all__'
+#
+#     def validate_nome(self, nome):
+#         padrao = r"^[a-zA-Z_ ]{3,40}$"
+#         if not re.fullmatch(padrao, nome):
+#             raise ValidationError('O nome deve conter: De 3 a 40 caracteres; Letras, _ e/ou espaços')
+#         return nome
+#
+#     def validate_senha(self, senha):
+#         padrao = r'^(?=.*\d)(?=.*[A-Z])(?=.*[a-z])(?=.*[^\w\d\s:])([^\s]){8,50}$'
+#         if not re.fullmatch(padrao, senha):
+#             raise ValidationError("A senha deve conter: De 8 a 50 caracteres; 1 número"
+#                                   "1 letra maiúscula ; 1 letra minúscula; 1 caractere especial")
+#         return senha
 
 
 class AutomacaoSerializers(serializers.ModelSerializer):
