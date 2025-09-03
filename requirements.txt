@@ -7,3 +7,4 @@ django-oauth-toolkit
 django-cors-headers
 python-magic
 python-magic-bin
+djangorestframework-simplejwt

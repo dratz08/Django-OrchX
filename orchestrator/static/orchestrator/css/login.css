@@ -1,0 +1,142 @@
+/* ==================== */
+/* RESET E CONFIGURAÇÕES GERAIS */
+/* ==================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", Arial, sans-serif;
+}
+
+body {
+    background-color: #00BB5F; /* Verde Principal */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* ==================== */
+/* CONTAINER PRINCIPAL */
+/* ==================== */
+.login-container {
+    background-color: #ffffff; /* Fundo branco */
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* ==================== */
+/* LOGO */
+/* ==================== */
+.login-logo {
+    width: 180px;
+    margin-bottom: 20px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ==================== */
+/* TÍTULO */
+/* ==================== */
+.login-container h1 {
+    font-size: 2rem;
+    color: #787878; /* Cinza */
+    margin-bottom: 25px;
+    font-weight: 700;
+}
+
+/* ==================== */
+/* FORMULÁRIO */
+/* ==================== */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Campos de input */
+.login-form input {
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    font-size: 1rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.login-form input:focus {
+    outline: none;
+    border-color: #00BB5F; /* Verde claro */
+    background-color: #ffffff;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
+
+/* ==================== */
+/* BOTÃO DE LOGIN */
+/* ==================== */
+.login-button {
+    background-color: #00BB5F; /* Verde principal */
+    color: #fff;
+    padding: 12px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease-in-out;
+    margin-top: 10px;
+}
+
+.login-button:hover {
+    background-color: #00914A; /* Verde mais escuro no hover */
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+/* ==================== */
+/* BOTÃO DE CADASTRO */
+/* ==================== */
+.signup-button {
+    background-color: transparent;
+    color: #00BB5F; /* Verde claro */
+    padding: 10px;
+    font-size: 0.95rem;
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: all 0.3s ease-in-out;
+    font-weight: 600;
+}
+
+.signup-button:hover {
+    background-color: #00BB5F;
+    color: white;
+}
+
+/* ==================== */
+/* RESPONSIVIDADE */
+/* ==================== */
+@media (max-width: 500px) {
+    .login-container {
+        max-width: 90%;
+        padding: 30px 20px;
+    }
+
+    .login-container h1 {
+        font-size: 1.6rem;
+    }
+
+    .login-form input {
+        font-size: 0.95rem;
+    }
+
+    .login-button,
+    .signup-button {
+        font-size: 0.9rem;
+    }
+}
