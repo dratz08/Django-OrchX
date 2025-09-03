@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    {% load static %}
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bots - OrchX</title>
+    <link rel="stylesheet" href="{% static 'orchestrator/css/bots.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+
+        <!-- Barra superior -->
+        <header class="top-bar">
+            <img src="{% static 'orchestrator/img/logo.png' %}" alt="OrchX Logo" class="logo">
+        </header>
+
+        <!-- Menu lateral -->
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li>
+                        <i class="fa-solid fa-grip"></i>
+                        <span>Dashboard</span>
+                    </li>
+                    <li class="active">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>Bots</span>
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-cogs"></i>
+                        <span>Automações</span>
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-calendar-alt"></i>
+                        <span>Agendamentos</span>
+                    </li>
+                    <li class="bottom">
+                        <i class="fa-solid fa-gear"></i>
+                        <span>Configurações</span>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo principal -->
+        <main class="content">
+            <div class="header">
+                <h2>Meus Bots</h2>
+                <a href="#" class="btn-new-bot">
+                    <i class="fa-solid fa-plus"></i> Novo Bot
+                </a>
+            </div>
+
+            <div class="bots-grid">
+                {% if bots %}
+                    {% for bot in bots %}
+                        <div class="bot-card">
+                            <div class="bot-header">
+                                <i class="fa-solid fa-robot"></i>
+                                <h3>{{ bot.nome }}</h3>
+                            </div>
+                            <p>{{ bot.descricao|default:"Sem descrição" }}</p>
+                            <span class="status {{ bot.status|lower }}">
+                                {{ bot.status }}
+                            </span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty">Você ainda não tem nenhum bot criado.</p>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</body>
+</html>

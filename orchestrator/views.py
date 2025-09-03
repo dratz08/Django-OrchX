@@ -8,6 +8,22 @@ from django.db import transaction
 from orchestrator.environment import criar_diretorio_robo, DIRETORIO_USUARIOS
 from django.shortcuts import render
 from orchestrator.throttles import RegisterAnonRateThrottle, BotCreateUserRateThrottle, UserRateThrottle
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+
+
+def dashboard_data(request):
+    # Simulação de dados, depois podemos integrar com o banco
+    mock_data = {
+        "24h": {"success": 80, "fail": 20},
+        "7d": {"success": 450, "fail": 100},
+        "30d": {"success": 1500, "fail": 400},
+    }
+
+    period = request.GET.get("period", "24h")
+    data = mock_data.get(period, {"success": 0, "fail": 0})
+
+    return JsonResponse(data)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -21,20 +37,15 @@ class RegisterView(generics.CreateAPIView):
             os.makedirs(f"{DIRETORIO_USUARIOS}/{user.id}/Bots", exist_ok=True)
 
 
-class BotCreateView(generics.CreateAPIView):
-    queryset = Bot.objects.all()
-    serializer_class = BotSerializers
-    permission_classes = [IsAuthenticated]
-    # Personalizar o limite de acesso a essa rota
-    throttle_classes = [BotCreateUserRateThrottle]
+@login_required
+def bots_view(request):
+    # Obtém todos os bots do usuário logado
+    bots = Bot.objects.filter(usuario=request.user)
 
-    def perform_create(self, serializer):
-        with transaction.atomic():
-            # Salva o bot, mas ainda não confirma no banco
-            bot = serializer.save(id_cliente=self.request.user)
-
-            # Monta o caminho dos diretórios
-            criar_diretorio_robo(str(bot.id), str(bot.id_cliente.id), bot.zip.path)
+    context = {
+        "bots": bots
+    }
+    return render(request, "orchestrator/bots.html", context)
 
 
 class ListaBots(generics.ListAPIView):
