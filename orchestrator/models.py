@@ -1,16 +1,17 @@
-import django
-from django.db import models
 import uuid
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
-from django.conf import settings
+from django.db import models
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.utils import timezone
 
+
+# =========================================================
+#  USER MODEL CUSTOMIZADO
+# =========================================================
 
 class CustomUserManager(BaseUserManager):
-    """Manager para criar usuários e superusuários com email"""
-
-    def _create_user(self, email, password, **extra_fields):
+    def _create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError("O campo email é obrigatório.")
+            raise ValueError("O usuário precisa de um endereço de email.")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -18,136 +19,159 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_user(self, email=None, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', False)
-        extra_fields.setdefault('is_superuser', False)
+        extra_fields.setdefault("is_staff", False)
+        extra_fields.setdefault("is_superuser", False)
         return self._create_user(email, password, **extra_fields)
 
     def create_superuser(self, email=None, password=None, **extra_fields):
+        # Melhoria: validação mais segura
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser precisa ter is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser precisa ter is_superuser=True.")
+        if not password:
+            raise ValueError("Superuser precisa ter uma senha.")
         return self._create_user(email, password, **extra_fields)
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        unique=True
-    )
-    email = models.EmailField(
-        unique=True,
-        max_length=255,
-        verbose_name="E-mail"
-    )
-    name = models.CharField(max_length=150, blank=True, null=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
+    nome = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
-    is_superuser = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(auto_now_add=True)
-
-    # Define que o login será feito com email
-    USERNAME_FIELD = "email"
-    EMAIL_FIELD = "email"
-    REQUIRED_FIELDS = []  # Nenhum campo obrigatório além do email
+    date_joined = models.DateTimeField(default=timezone.now)
 
     objects = CustomUserManager()
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return str(self.id)
 
 
+# =========================================================
+#  STATUS PADRONIZADOS (REUTILIZÁVEL)
+# =========================================================
+
+class Status(models.TextChoices):
+    PARADO = "parado", "Parado"
+    RODANDO = "rodando", "Rodando"
+    FALHA = "falha", "Falha"
+    SUCESSO = "sucesso", "Sucesso"
+
+
+# =========================================================
+#  BOT MODEL
+# =========================================================
+
 class Bot(models.Model):
     TIPO = (
-        ('robot', 'robot'),
-        ('python', 'python')
+        ('python', 'python'),
+        ('robot', 'robot')
     )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_cliente = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="bots")
+    nome = models.CharField(max_length=255)
+    tipo = models.CharField(choices=TIPO, blank=False, null=False, default='python')
+    zip = models.FileField(upload_to="bots_zip/", blank=True, null=True)
+    diretorio = models.CharField(max_length=500)
+    entrypoint = models.CharField(max_length=255)
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4(), editable=False, unique=True)
-    nome = models.CharField(max_length=100, blank=False)
-    id_cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    zip = models.FileField(blank=False, upload_to="bots_zip/")
-    entrypoint = models.CharField(blank=False)
-    tipo = models.CharField(max_length=6, choices=TIPO, blank=False, default='robot')
-    diretorio = models.CharField(blank=False, default="abc")
-    log_timeout = models.IntegerField(blank=False)
-
-    # Cria uma relação de unicidade para os nomes de um mesmo id
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["id", "nome"], name="unique_id_nome_bot")
+            # Garantir que cada cliente só possa ter bots com nomes únicos
+            models.UniqueConstraint(fields=["id_cliente", "nome"], name="unique_nome_por_cliente")
         ]
 
     def __str__(self):
-        return self.id
+        dados = {
+            'nome': self.nome
+        }
+        return str(dados)
 
+
+# =========================================================
+#  AUTOMAÇÃO
+# =========================================================
 
 class Automacao(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4(), editable=False, unique=True)
-    nome = models.CharField(max_length=100, blank=False)
-    id_cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    status = models.CharField()
-    descricao = models.CharField(max_length=800)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_cliente = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="automacoes")
+    nome = models.CharField(max_length=255)
+    descricao = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PARADO)
 
-    # Cria uma relação de unicidade para os nomes de um mesmo id
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["id", "nome"], name="unique_id_nome_automacao")
+            models.UniqueConstraint(fields=["id_cliente", "nome"], name="unique_automacao_por_cliente")
         ]
 
     def __str__(self):
-        return self.id
+        dados = {
+            'nome': self.nome
+        }
+        return str(dados)
 
+
+# =========================================================
+#  PASSOS DA AUTOMAÇÃO
+# =========================================================
 
 class PassoAutomacao(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4(), editable=False, unique=True)
-    ordem = models.IntegerField(auto_created=True)
-    id_automacao = models.ForeignKey(Automacao, on_delete=models.CASCADE)
-    id_cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    id_bot = models.ForeignKey(Bot, null=True, on_delete=models.PROTECT)
-    status = models.CharField()
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_cliente = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="passos")
+    id_automacao = models.ForeignKey(Automacao, on_delete=models.CASCADE, related_name="passos")
+    id_bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="passos")
+    nome = models.CharField(max_length=255)
+    ordem = models.PositiveIntegerField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PARADO)
 
-    # Cria uma relação de unicidade para a ordem de uma mesma automacao
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["id_automacao", "ordem"], name="unique_id_ordem_passo")
+            # Impede duas etapas com mesma ordem dentro da mesma automação
+            models.UniqueConstraint(fields=["id_automacao", "ordem"], name="unique_ordem_por_automacao")
         ]
 
     def __str__(self):
-        return self.id
+        return str(self.id)
 
+
+# =========================================================
+#  LOG DE EXECUÇÃO DE ROBÔS
+# =========================================================
 
 class LogRobot(models.Model):
-    id = models.CharField(primary_key=True, default=uuid.uuid4(), editable=False, unique=True)
-    id_cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    id_automacao = models.ForeignKey(Automacao, on_delete=models.CASCADE)
-    id_bot = models.ForeignKey(Bot, on_delete=models.CASCADE)
-    data_hora = models.DateField(default=django.utils.timezone.now)
-
-    tasks_falhas = models.IntegerField()
-    tasks_completas = models.IntegerField()
-    tasks_puladas = models.IntegerField()
-    duracao = models.IntegerField()
-    link = models.CharField()
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_cliente = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="logs")
+    id_automacao = models.ForeignKey(Automacao, on_delete=models.CASCADE, related_name="logs")
+    id_bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="logs")
+    data_hora = models.DateTimeField(default=timezone.now)
+    link = models.URLField(max_length=500)
 
     def __str__(self):
-        return self.id
+        return str(self.id)
 
+
+# =========================================================
+#  AGENDAMENTO DE AUTOMAÇÕES
+# =========================================================
 
 class Agendamento(models.Model):
-    id = models.CharField(primary_key=True, default=uuid.uuid4(), editable=False, unique=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_cliente = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="agendamentos")
+    id_automacao = models.ForeignKey(Automacao, on_delete=models.CASCADE, related_name="agendamentos")
     nome = models.CharField(max_length=255)
-    id_automacao = models.ForeignKey(Automacao, on_delete=models.CASCADE)
-    cron = models.CharField(max_length=40, blank=False)
-    ativo = models.BooleanField(blank=False)
-    id_cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    ativo = models.BooleanField(default=False)
+    cron = models.CharField(max_length=255)
 
-    # Cria uma relação de unicidade para os nomes de um mesmo id
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["id", "nome"], name="unique_id_nome_agendamento")
+            models.UniqueConstraint(fields=["id_cliente", "nome"], name="unique_agendamento_por_cliente")
         ]
 
-
     def __str__(self):
-        return self.id
+        return self.nome

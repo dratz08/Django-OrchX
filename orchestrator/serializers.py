@@ -9,27 +9,31 @@ import re
 class BotSerializers(serializers.ModelSerializer):
     class Meta:
         model = Bot
-        fields = ['nome', 'entrypoint', 'zip', 'tipo', 'log_timeout']
-        read_only_fields = ["id_cliente"]
+        fields = ['nome', 'entrypoint', 'zip', 'tipo']
 
     def validate(self, dados):
         padrao_nome = r"^[a-zA-Z_]{3,30}$"
-        padrao_entrypoint = r"^[a-zA-Z0-9_]{4,240}\.(py|robot)$"
+        padrao_entrypoint = r"^[a-zA-Z0-9_]{1,240}\.(py|robot)$"
 
+        # Valida as restrições do campo nome, bem como sua duplicidade
         if not re.fullmatch(padrao_nome, dados['nome']):
             raise ValidationError({
                 'nome': 'O nome deve conter: De 3 a 30 caracteres; Letras e/ou _'
             })
+        user = self.context["request"].user
+        if Bot.objects.filter(id_cliente=user, nome=dados['nome']).exists():
+            raise serializers.ValidationError({"nome": "Você já possui um bot com este nome."})
 
+        # Valida as restrições do campo entrypoint
         if not re.fullmatch(padrao_entrypoint, dados['entrypoint']):
             raise ValidationError({
                 'entrypoint': 'O entrypoint não deve possuir caracteres inválidos e deve ser do tipo .robot ou .py'
             })
-        return dados
 
-    def validate_zip(self, zip):
-        validar_arquivo_zip(zip)
-        return zip
+        # Varre o arquivo zip em busca de inconsistencias
+        validar_arquivo_zip(dados['zip'])
+
+        return dados
 
     def create(self, validated_data):
         validated_data["id_cliente"] = self.context["request"].user
@@ -70,15 +74,53 @@ class AutomacaoSerializers(serializers.ModelSerializer):
 
 
 class PassoAutomacaoSerializers(serializers.ModelSerializer):
+    id_bot = serializers.SlugRelatedField(
+        slug_field="nome",
+        queryset=Bot.objects.none()
+    )
+    id_automacao = serializers.SlugRelatedField(
+        slug_field="nome",
+        queryset=Automacao.objects.none()
+    )
+
     class Meta:
         model = PassoAutomacao
         fields = ['id_automacao', 'id_bot']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        request = self.context.get('request')
+        if request and hasattr(request, "user"):
+            self.fields["id_bot"].queryset = Bot.objects.filter(id_cliente=request.user)
+            self.fields["id_automacao"].queryset = Automacao.objects.filter(id_cliente=request.user)
+
+    def create(self, validated_data: dict):
+        user = self.context.get("request").user
+        id_automacao = Automacao.objects.filter(id_cliente=user, nome=validated_data['id_automacao'])[0].id
+        id_bot = Automacao.objects.filter(id_cliente=user, nome=validated_data['id_bot'])[0].id
+        validated_data["id_automacao"] = id_automacao
+        validated_data["id_bot"] = id_bot
+        validated_data["id_cliente"] = user
+        return validated_data
+
 
 class AgendamentoSerializers(serializers.ModelSerializer):
+    automacao = serializers.SlugRelatedField(
+        slug_field='nome',
+        queryset= Automacao.objects.none()
+    )
+
     class Meta:
         model = Agendamento
-        fields = ['nome', 'id_automacao', 'cron', 'ativo']
+        fields = ['nome', 'automacao', 'cron', 'ativo']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            self.fields["automacao"].queryset = Automacao.objects.filter(id_cliente=request.user)
 
     def validate_nome(self, nome):
         padrao = r"^[a-zA-Z_]{3,50}$"
