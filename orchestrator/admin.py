@@ -1,24 +1,36 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser
+from orchestrator.models import Bot, Automacao, PassoAutomacao, Agendamento
 
 
-@admin.register(CustomUser)
-class CustomUserAdmin(UserAdmin):
-    model = CustomUser
-    list_display = ("email", "name", "is_staff", "is_active")
-    list_filter = ("is_staff", "is_active")
-    ordering = ("email",)
-    search_fields = ("email", "name")
-    fieldsets = (
-        (None, {"fields": ("email", "password")}),
-        ("Informações pessoais", {"fields": ("name",)}),
-        ("Permissões", {"fields": ("is_staff", "is_active", "is_superuser", "groups", "user_permissions")}),
-        ("Datas importantes", {"fields": ("last_login",)}),
-    )
-    add_fieldsets = (
-        (None, {
-            "classes": ("wide",),
-            "fields": ("email", "password1", "password2", "is_staff", "is_active")}
-        ),
-    )
+class Bots(admin.ModelAdmin):
+    list_display = ('id', 'nome', 'entrypoint', 'tipo', 'diretorio', 'log_timeout')
+    list_display_links = ('id', 'nome', 'entrypoint', 'tipo', 'diretorio', 'log_timeout')
+    list_per_page = 10
+    search_fields = ('id', 'nome')
+
+
+class Automacoes(admin.ModelAdmin):
+    list_display = ('id', 'nome', 'id_cliente', 'descricao')
+    list_display_links = ('id', 'nome', 'id_cliente', 'descricao')
+    list_per_page = 10
+    search_fields = ('nome',)
+
+
+class PassosAutomacoes(admin.ModelAdmin):
+    list_display = ('id', 'ordem', 'id_automacao', 'id_bot', 'id_cliente')
+    list_display_links = ('id', 'ordem', 'id_automacao', 'id_bot', 'id_cliente')
+    list_per_page = 10
+    search_fields = ('id_automacao', 'id_bot', 'id_cliente')
+
+
+class Agendamentos(admin.ModelAdmin):
+    list_display = ('id', 'nome', 'cron', 'id_automacao', 'id_cliente', 'ativo')
+    list_display_links = ('id', 'nome', 'cron', 'id_automacao', 'id_cliente', 'ativo')
+    list_per_page = 10
+    search_fields = ('nome', 'id_automacao', 'id_cliente')
+
+
+admin.site.register(Bot, Bots)
+admin.site.register(Automacao, Automacoes)
+admin.site.register(Agendamento, Agendamentos)
+admin.site.register(PassoAutomacao, PassosAutomacoes)

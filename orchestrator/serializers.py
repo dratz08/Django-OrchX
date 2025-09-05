@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from orchestrator.models import Bot, Automacao, PassoAutomacao, CustomUser
+from orchestrator.models import Bot, Automacao, PassoAutomacao, Agendamento, CustomUser
 from rest_framework.validators import ValidationError
 from orchestrator.zip_validator import validar_arquivo_zip
+from orchestrator.utils import validar_cron
 import re
 
 
@@ -24,10 +25,11 @@ class BotSerializers(serializers.ModelSerializer):
             raise ValidationError({
                 'entrypoint': 'O entrypoint não deve possuir caracteres inválidos e deve ser do tipo .robot ou .py'
             })
+        return dados
 
     def validate_zip(self, zip):
-        print(self.context["request"].user.id)
-        return validar_arquivo_zip(zip)
+        validar_arquivo_zip(zip)
+        return zip
 
     def create(self, validated_data):
         validated_data["id_cliente"] = self.context["request"].user
@@ -73,13 +75,31 @@ class PassoAutomacaoSerializers(serializers.ModelSerializer):
         fields = ['id_automacao', 'id_bot']
 
 
-class ListaBotSerializers(serializers.ListSerializer):
+class AgendamentoSerializers(serializers.ModelSerializer):
     class Meta:
-        model = Bot
-        fields = "__all__"
+        model = Agendamento
+        fields = ['nome', 'id_automacao', 'cron', 'ativo']
 
+    def validate_nome(self, nome):
+        padrao = r"^[a-zA-Z_]{3,50}$"
+        if not re.fullmatch(padrao, nome):
+            raise ValidationError('O nome deve conter: De 3 a 50 caracteres; Letras e/ou _')
+        return nome
 
-class ListaAutomacaoSerializers(serializers.ListSerializer):
-    class Meta:
-        model = Automacao
-        fields = ['nome', 'descricao']
+    def validate_cron(self, cron):
+        check = validar_cron(cron)
+        if not check:
+            raise ValidationError('Expressão cron inválida')
+        return cron
+#
+#
+# class ListaBotSerializers(serializers.ListSerializer):
+#     class Meta:
+#         model = Bot
+#         fields = "__all__"
+#
+#
+# class ListaAutomacaoSerializers(serializers.ListSerializer):
+#     class Meta:
+#         model = Automacao
+#         fields = ['nome', 'descricao']

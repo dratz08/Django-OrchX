@@ -34,6 +34,7 @@ def criar_diretorios_usuario(id_cliente):
 
 
 def criar_diretorio_robo(id_bot, id_cliente, zip_path):
+    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     novo_robo_dir = os.path.join(DIRETORIO_USUARIOS, str(id_cliente), "Bots", str(id_bot))
     caminho_move_zip = os.path.join(novo_robo_dir, os.path.basename(zip_path))
     try:

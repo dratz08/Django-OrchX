@@ -8,3 +8,4 @@ django-cors-headers
 python-magic
 python-magic-bin
 djangorestframework-simplejwt
+croniter

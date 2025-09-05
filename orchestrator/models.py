@@ -86,6 +86,7 @@ class Automacao(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4(), editable=False, unique=True)
     nome = models.CharField(max_length=100, blank=False)
     id_cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    status = models.CharField()
     descricao = models.CharField(max_length=800)
 
     # Cria uma relação de unicidade para os nomes de um mesmo id
@@ -104,6 +105,7 @@ class PassoAutomacao(models.Model):
     id_automacao = models.ForeignKey(Automacao, on_delete=models.CASCADE)
     id_cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     id_bot = models.ForeignKey(Bot, null=True, on_delete=models.PROTECT)
+    status = models.CharField()
 
     # Cria uma relação de unicidade para a ordem de uma mesma automacao
     class Meta:
@@ -134,10 +136,18 @@ class LogRobot(models.Model):
 
 class Agendamento(models.Model):
     id = models.CharField(primary_key=True, default=uuid.uuid4(), editable=False, unique=True)
+    nome = models.CharField(max_length=255)
     id_automacao = models.ForeignKey(Automacao, on_delete=models.CASCADE)
     cron = models.CharField(max_length=40, blank=False)
     ativo = models.BooleanField(blank=False)
     id_cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    # Cria uma relação de unicidade para os nomes de um mesmo id
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["id", "nome"], name="unique_id_nome_agendamento")
+        ]
+
 
     def __str__(self):
         return self.id
